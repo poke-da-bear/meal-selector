@@ -382,7 +382,12 @@ function buildDinner(pattern, breakfast, meal2, ctx = null, forceLight = false) 
   const noTunaToday = ctx ? ctx.tunaYesterday : tunaYesterday();
 
   if (pattern === "comfort" && comfortCount < 3 && !heavyToday && !forceLight) {
-    const availableComfort = filterByPantry(foods.standalone);
+    // Day view: only allow comfort meals that are scheduled
+    // Week view (ctx exists): use pantry only (week handles scheduling separately)
+    const availableComfort = filterByPantry(foods.standalone).filter(f => {
+      if (ctx) return true;
+      return scheduledHeavy[f.name] === true;
+    });
     if (availableComfort.length > 0) {
       let comfort;
       const chiliCount = ctx ? ctx.chiliCount : 0;
@@ -411,6 +416,11 @@ function buildDinner(pattern, breakfast, meal2, ctx = null, forceLight = false) 
   let pool = filterByPantry(foods.leanModerate);
   if (meal2.fish) pool = pool.filter(f => !f.fish);
   if (heavyToday || forceLight) pool = pool.filter(f => f.weight !== "heavy");
+
+  // Day view: only allow heavy meals that are scheduled
+  if (!ctx) {
+    pool = pool.filter(f => f.weight !== "heavy" || scheduledHeavy[f.name] === true);
+  }
 
   const tunaCount = (ctx ? ctx.tunaCount : countWeekly(m => m.tuna)) + (meal2.tuna ? 1 : 0);
   if (tunaCount >= 3) pool = pool.filter(f => !f.tuna);
