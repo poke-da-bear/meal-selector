@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Selector</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🍽️ Meal Selector</h1>
+    <p class="tagline">Stay within your guidelines</p>
+  </header>
+
+  <section class="view-tabs">
+    <button class="tab-btn active" data-view="day">📅 Today</button>
+    <button class="tab-btn" data-view="week">🗓️ Full Week</button>
+    <button class="tab-btn" data-view="pantry">🛒 Pantry</button>
+    <button class="tab-btn" data-view="rules">📖 Rules</button>
+  </section>
+
+  <!-- PANTRY VIEW -->
+  <div id="pantry-view" class="view">
+    <section class="rules-section">
+      <h2>🛒 What's Available?</h2>
+      <p class="hint" style="margin-bottom:1rem;">Check the items you have on hand. The meal generator will only use these. Your selections are saved automatically.</p>
+
+      <div class="pantry-actions">
+        <button id="selectAll" class="secondary">✅ Select All</button>
+        <button id="deselectAll" class="secondary">❌ Deselect All</button>
+        <button id="resetPantry" class="secondary">🔄 Reset to Default (All)</button>
+      </div>
+
+      <h3 class="pantry-heading">🍳 Breakfast Proteins</h3>
+      <div class="pantry-grid" id="pantry-breakfast"></div>
+
+      <h3 class="pantry-heading">🥩 Main Proteins</h3>
+      <div class="pantry-grid" id="pantry-mains"></div>
+
+      <h3 class="pantry-heading">🍲 Standalone Meals</h3>
+      <div class="pantry-grid" id="pantry-standalone"></div>
+
+      <h3 class="pantry-heading">🥬 Sides & Vegetables</h3>
+      <div class="pantry-grid" id="pantry-sides"></div>
+
+      <div class="pantry-status" id="pantry-status"></div>
+    </section>
+  </div>
+
+  <!-- DAY VIEW -->
+  <div id="day-view" class="view active">
+    <section class="controls">
+      <label>
+        Day Pattern:
+        <select id="pattern">
+          <option value="auto">Auto (smart pick)</option>
+          <option value="balanced">Balanced Day</option>
+          <option value="lean">Lean Day</option>
+          <option value="comfort">Comfort Day</option>
+          <option value="grill">Grill Day</option>
+        </select>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="mounjaro"> Mounjaro mode
+      </label>
+      <button id="generateDay" class="primary">Generate Day</button>
+    </section>
+
+    <div class="pantry-banner" id="pantry-banner-day"></div>
+
+    <section class="day-plan">
+      <div class="meal-card" id="breakfast-card">
+        <div class="meal-header">
+          <h2>🌅 Breakfast</h2>
+          <div class="meal-actions">
+            <button class="lock-btn" data-meal="breakfast" title="Lock">🔓</button>
+            <button class="reroll-btn" data-meal="breakfast" title="Reroll">🎲</button>
+          </div>
+        </div>
+        <div class="meal-content" id="breakfast-content">
+          <p class="empty">Click Generate to start</p>
+        </div>
+      </div>
+
+      <div class="meal-card" id="meal2-card">
+        <div class="meal-header">
+          <h2>🥗 Meal 2</h2>
+          <div class="meal-actions">
+            <button class="lock-btn" data-meal="meal2" title="Lock">🔓</button>
+            <button class="reroll-btn" data-meal="meal2" title="Reroll">🎲</button>
+          </div>
+        </div>
+        <div class="meal-content" id="meal2-content">
+          <p class="empty">—</p>
+        </div>
+      </div>
+
+      <div class="meal-card" id="dinner-card">
+        <div class="meal-header">
+          <h2>🌙 Dinner</h2>
+          <div class="meal-actions">
+            <button class="lock-btn" data-meal="dinner" title="Lock">🔓</button>
+            <button class="reroll-btn" data-meal="dinner" title="Reroll">🎲</button>
+          </div>
+        </div>
+        <div class="meal-content" id="dinner-content">
+          <p class="empty">—</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="tracker">
+      <h3>📊 This Week's Logged Days</h3>
+      <div class="tracker-grid">
+        <div class="track-item">
+          <span class="track-label">Tuna meals</span>
+          <span class="track-value" id="tunaCount">0</span>
+          <span class="track-limit">/ 3 max</span>
+        </div>
+        <div class="track-item">
+          <span class="track-label">Comfort meals</span>
+          <span class="track-value" id="comfortCount">0</span>
+          <span class="track-limit">/ 3 max</span>
+        </div>
+        <div class="track-item">
+          <span class="track-label">Heavy days</span>
+          <span class="track-value" id="heavyCount">0</span>
+        </div>
+      </div>
+      <button id="logDay" class="secondary">Save Today's Plan</button>
+      <button id="resetWeek" class="secondary danger">Reset Week</button>
+    </section>
+
+    <section class="notes" id="notes"></section>
+  </div>
+
+  <!-- WEEK VIEW -->
+  <div id="week-view" class="view">
+    <section class="controls week-controls">
+      <div class="control-row">
+        <label class="full-width">
+          <strong>Pick your heavy meals for the week:</strong>
+          <span class="hint">Check the ones you want to have this week. Only items in your Pantry will be available.</span>
+        </label>
+      </div>
+      <div class="heavy-picker" id="heavy-picker">
+        <!-- populated by JS based on pantry -->
+      </div>
+      <div class="control-row">
+        <button id="generateWeek" class="primary">🗓️ Generate Week</button>
+        <button id="printWeek" class="secondary">🖨️ Print</button>
+      </div>
+    </section>
+
+    <div class="pantry-banner" id="pantry-banner-week"></div>
+
+    <div id="week-summary" class="week-summary"></div>
+    <div id="week-plan" class="week-plan"></div>
+  </div>
+
+  <!-- RULES VIEW -->
+  <div id="rules-view" class="view">
+    <section class="rules-section">
+      <h2>📖 Meal Selector Rules & Guidelines</h2>
+
+      <details open>
+        <summary><strong>Meal Structure</strong></summary>
+        <div class="rule-body">
+          <table>
+            <tr><th>Meal</th><th>Required Structure</th></tr>
+            <tr><td>Breakfast</td><td>Eggs + breakfast protein</td></tr>
+            <tr><td>Meal 2</td><td>Lean/moderate protein + side</td></tr>
+            <tr><td>Dinner</td><td>Anchor protein + side OR approved standalone meal</td></tr>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Food Categories</strong></summary>
+        <div class="rule-body">
+          <h4>Breakfast Proteins</h4>
+          <ul>
+            <li>Eggs (base)</li>
+            <li>Wild boar sausage (heavy)</li>
+            <li>Bacon (heavy)</li>
+            <li>Small steak (heavy)</li>
+          </ul>
+          <h4>Lean / Moderate Proteins</h4>
+          <ul>
+            <li>Grilled chicken (lean)</li>
+            <li>Smoked turkey breast (lean)</li>
+            <li>Tuna bowl (lean/moderate)</li>
+            <li>Tuna wrap (moderate)</li>
+            <li>Mahi (lean)</li>
+            <li>Burger plate (moderate / heavy with cheese)</li>
+            <li>NY strip (moderate)</li>
+            <li>Ribeye (heavy)</li>
+            <li>Country ribs (heavy)</li>
+            <li>Spaghetti and meatballs (heavy, contains carbs)</li>
+            <li>Carnivore chili (heavy)</li>
+            <li>Cheeseburger soup (heavy)</li>
+          </ul>
+          <h4>Sides / Add-ons</h4>
+          <ul>
+            <li>Green beans (default side)</li>
+            <li>Jalapeños (flavor add-on)</li>
+            <li>Carrots (optional grill add-on, controlled carb)</li>
+            <li>Coleslaw (occasional, controlled carb)</li>
+            <li>Peas (controlled carb)</li>
+            <li>Lima beans (controlled carb)</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 1: Breakfast Must Include Protein + Support</strong></summary>
+        <div class="rule-body">
+          Breakfast should not be eggs alone unless necessary.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 2: Every Meal Needs a Side or Add-On</strong></summary>
+        <div class="rule-body">
+          A burger by itself is not a full selector result.
+          <p><strong>Exceptions:</strong> Carnivore chili can stand alone. Cheeseburger soup can stand alone.</p>
+        </div>
+      </details>
+
+      <details open>
+        <summary><strong>Rule 3: Only One Heavy Meal Per Day ⚠️</strong></summary>
+        <div class="rule-body">
+          <p><strong>Strictly enforced:</strong> Never two red-bordered (heavy) meals in the same day.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 4: Tuna Frequency</strong></summary>
+        <div class="rule-body">
+          Tuna 2–3x per week max. Don't pair tuna wrap with peas/lima beans.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 5: Fish Frequency</strong></summary>
+        <div class="rule-body">
+          No more than one fish-based meal per day (tuna bowl, tuna wrap, mahi).
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 6: Comfort Meal Rule</strong></summary>
+        <div class="rule-body">
+          Carnivore chili or cheeseburger soup may replace dinner up to 3x per week. Never both on the same day.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 7: Carb Control Rule</strong></summary>
+        <div class="rule-body">
+          Only one controlled-carb item per meal (peas, lima beans, carrots, coleslaw, wheat wrap/bread).
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 8: Carrots Are Optional, Not Planned</strong></summary>
+        <div class="rule-body">
+          Carrots are a grill add-on. Keep portion small/moderate.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 9: Lean Correction Rule</strong></summary>
+        <div class="rule-body">
+          If the previous meal was heavy, the next meal should be lean.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 10: Mounjaro Rule</strong></summary>
+        <div class="rule-body">
+          If appetite is low: protein first → side → optional carb.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 11: No Tuna Two Days in a Row</strong></summary>
+        <div class="rule-body">
+          Tuna (bowl or wrap) should not appear on consecutive days. Works alongside Rule 4.
+        </div>
+      </details>
+
+      <details>
+        <summary><strong>Rule 12: Pantry Awareness</strong></summary>
+        <div class="rule-body">
+          The generator only uses ingredients you've checked off in the 🛒 Pantry tab. Update your pantry whenever you shop or run out of something.
+        </div>
+      </details>
+    </section>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
