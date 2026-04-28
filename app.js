@@ -692,11 +692,9 @@ function renderTracker() {
 
 function renderNotes() {
   const notes = [];
-  const mounjaro = document.getElementById("mounjaro").checked;
-  if (mounjaro) notes.push("🎯 Mounjaro mode: Eat protein FIRST, then sides, then any carbs.");
   const heavyCount = ["breakfast","meal2","dinner"].filter(s => currentDay[s]?.weight === "heavy").length;
   if (heavyCount > 1) notes.push("⚠️ Rule 3 violated: Multiple heavy meals today. Unlock and reroll one to fix.");
-  if (tunaYesterday()) notes.push("🐟 Tuna was logged yesterday — Rule 11 is blocking tuna today.");
+  if (tunaYesterday()) notes.push("🐟 Tuna was logged yesterday — Rule 10 is blocking tuna today.");
   const notesEl = document.getElementById("notes");
   if (notes.length) {
     notesEl.innerHTML = "<strong>Notes:</strong><ul>" + notes.map(n => `<li>${n}</li>`).join("") + "</ul>";
@@ -773,7 +771,6 @@ document.getElementById("generateWeek").addEventListener("click", generateWeek);
 document.getElementById("printWeek").addEventListener("click", () => window.print());
 document.getElementById("logDay").addEventListener("click", logToday);
 document.getElementById("resetWeek").addEventListener("click", resetWeek);
-document.getElementById("mounjaro").addEventListener("change", renderNotes);
 document.getElementById("selectAll").addEventListener("click", () => selectAllPantry(true));
 document.getElementById("deselectAll").addEventListener("click", () => selectAllPantry(false));
 document.getElementById("resetPantry").addEventListener("click", () => {
