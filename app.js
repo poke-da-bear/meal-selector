@@ -1,7 +1,7 @@
 // ===== FOOD DATA =====
 const foods = {
   breakfastProteins: [
-    { name: "Wild boar sausage", weight: "heavy" },
+    { name: "Sausage", weight: "heavy" },
     { name: "Bacon", weight: "heavy" },
     { name: "Small steak", weight: "heavy" },
   ],
@@ -32,7 +32,6 @@ const foods = {
   ],
 };
 
-// Map of heavy dinner picks to their emoji for the week-view picker
 const heavyPickerItems = [
   { name: "Spaghetti and meatballs", label: "🍝 Spaghetti & Meatballs" },
   { name: "Carnivore chili", label: "🌶️ Carnivore Chili" },
@@ -46,7 +45,8 @@ const heavyPickerItems = [
 let currentDay = { breakfast: null, meal2: null, dinner: null };
 let locked = { breakfast: false, meal2: false, dinner: false };
 let weekPlan = null;
-let pantry = {}; // { "Wild boar sausage": true, ... }
+let pantry = {};
+let scheduledHeavy = {};
 
 // ===== HELPERS =====
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -81,8 +81,13 @@ function loadPantry() {
   const saved = localStorage.getItem("mealPantry");
   if (saved) {
     pantry = JSON.parse(saved);
+    // Migration: rename old "Wild boar sausage" to "Sausage"
+    if (pantry.hasOwnProperty("Wild boar sausage")) {
+      pantry["Sausage"] = pantry["Wild boar sausage"];
+      delete pantry["Wild boar sausage"];
+      savePantry();
+    }
   } else {
-    // Default: everything available
     pantry = {};
     [...foods.breakfastProteins, ...foods.leanModerate, ...foods.standalone, ...foods.sides]
       .forEach(item => { pantry[item.name] = true; });
@@ -99,11 +104,20 @@ function filterByPantry(items) {
   return items.filter(i => isAvailable(i.name));
 }
 
+// ===== SCHEDULED HEAVY =====
+function loadScheduledHeavy() {
+  const saved = localStorage.getItem("scheduledHeavy");
+  scheduledHeavy = saved ? JSON.parse(saved) : {};
+}
+function saveScheduledHeavy() {
+  localStorage.setItem("scheduledHeavy", JSON.stringify(scheduledHeavy));
+}
+
+// ===== RENDER PANTRY =====
 function renderPantry() {
   const groups = [
     { id: "pantry-breakfast", items: foods.breakfastProteins },
     { id: "pantry-mains", items: foods.leanModerate },
-    { id: "pantry-standalone", items: foods.standalone },
     { id: "pantry-sides", items: foods.sides },
   ];
 
@@ -117,14 +131,18 @@ function renderPantry() {
     `).join("");
   });
 
-  // Wire up checkboxes
   document.querySelectorAll(".pantry-check").forEach(cb => {
     cb.addEventListener("change", () => {
       pantry[cb.dataset.name] = cb.checked;
       savePantry();
+      if (!cb.checked && scheduledHeavy[cb.dataset.name]) {
+        delete scheduledHeavy[cb.dataset.name];
+        saveScheduledHeavy();
+      }
       renderPantryStatus();
       renderPantryBanners();
       renderHeavyPicker();
+      renderWeekHeavySummary();
     });
   });
 
@@ -132,8 +150,9 @@ function renderPantry() {
 }
 
 function renderPantryStatus() {
-  const total = [...foods.breakfastProteins, ...foods.leanModerate, ...foods.standalone, ...foods.sides].length;
-  const available = Object.values(pantry).filter(v => v === true).length;
+  const total = [...foods.breakfastProteins, ...foods.leanModerate, ...foods.sides].length;
+  const available = [...foods.breakfastProteins, ...foods.leanModerate, ...foods.sides]
+    .filter(item => isAvailable(item.name)).length;
   const status = document.getElementById("pantry-status");
   if (status) {
     status.innerHTML = `<strong>${available}</strong> of ${total} items available. ${available < 5 ? "⚠️ Very few items available — generator may struggle." : ""}`;
@@ -143,22 +162,23 @@ function renderPantryStatus() {
 function renderPantryBanners() {
   const dayBanner = document.getElementById("pantry-banner-day");
   const weekBanner = document.getElementById("pantry-banner-week");
-  
+
   const mainProteins = filterByPantry(foods.leanModerate);
   const breakfastProteins = filterByPantry(foods.breakfastProteins);
   const sides = filterByPantry(foods.sides.filter(s => !s.addon));
-  
+
   let warnings = [];
   if (breakfastProteins.length === 0) warnings.push("No breakfast proteins");
   if (mainProteins.length === 0) warnings.push("No main proteins");
   if (sides.length === 0) warnings.push("No sides");
 
-  const total = Object.values(pantry).filter(v => v === true).length;
-  const allItems = [...foods.breakfastProteins, ...foods.leanModerate, ...foods.standalone, ...foods.sides].length;
-  
+  const trackedItems = [...foods.breakfastProteins, ...foods.leanModerate, ...foods.sides];
+  const total = trackedItems.filter(item => isAvailable(item.name)).length;
+  const allItems = trackedItems.length;
+
   let msg = "";
   let warning = false;
-  
+
   if (warnings.length > 0) {
     msg = `⚠️ <strong>Pantry issue:</strong> ${warnings.join(", ")}. <a onclick="switchView('pantry')">Update pantry</a>`;
     warning = true;
@@ -182,33 +202,100 @@ function renderPantryBanners() {
 function selectAllPantry(value) {
   [...foods.breakfastProteins, ...foods.leanModerate, ...foods.standalone, ...foods.sides]
     .forEach(item => { pantry[item.name] = value; });
+  if (!value) {
+    scheduledHeavy = {};
+    saveScheduledHeavy();
+  }
   savePantry();
   renderPantry();
   renderPantryBanners();
   renderHeavyPicker();
+  renderWeekHeavySummary();
 }
 
+// ===== HEAVY PICKER =====
 function renderHeavyPicker() {
   const container = document.getElementById("heavy-picker");
+  const status = document.getElementById("heavy-status");
   if (!container) return;
-  
-  // Only show heavy meals that are in the pantry
-  const available = heavyPickerItems.filter(item => isAvailable(item.name));
-  
+
+  // For standalones (chili, soup), always show in picker
+  // For other heavies (ribeye, ribs, etc.), they need to be in main proteins pantry
+  const available = heavyPickerItems.filter(item => {
+    const isStandalone = foods.standalone.some(f => f.name === item.name);
+    if (isStandalone) return true;
+    return isAvailable(item.name);
+  });
+
   if (available.length === 0) {
-    container.innerHTML = '<p class="hint" style="grid-column:1/-1;">No heavy meals available in your pantry. <a onclick="switchView(\'pantry\')" style="color:#4a9eff;cursor:pointer;text-decoration:underline;">Add some</a> or generate a fully lean week.</p>';
+    container.innerHTML = '<p class="hint" style="grid-column:1/-1;">No heavy meals available — check some heavy proteins above to enable scheduling.</p>';
+    if (status) status.innerHTML = "";
     return;
   }
-  
+
   container.innerHTML = available.map(item => `
     <label class="check-item">
-      <input type="checkbox" class="heavy-pick" value="${item.name}">
+      <input type="checkbox" class="heavy-pick" value="${item.name}" data-name="${item.name}" ${scheduledHeavy[item.name] ? "checked" : ""}>
       <span>${item.label}</span>
     </label>
   `).join("");
+
+  container.querySelectorAll(".heavy-pick").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const name = cb.dataset.name;
+      const isStandalone = foods.standalone.some(f => f.name === name);
+
+      if (cb.checked) {
+        scheduledHeavy[name] = true;
+        if (isStandalone) {
+          pantry[name] = true;
+          savePantry();
+        }
+      } else {
+        delete scheduledHeavy[name];
+        if (isStandalone) {
+          pantry[name] = false;
+          savePantry();
+        }
+      }
+      saveScheduledHeavy();
+      renderWeekHeavySummary();
+      renderHeavyStatus();
+      renderPantryBanners();
+    });
+  });
+
+  renderHeavyStatus();
 }
 
-// Check if tuna was eaten yesterday
+function renderHeavyStatus() {
+  const status = document.getElementById("heavy-status");
+  if (!status) return;
+  const count = Object.keys(scheduledHeavy).length;
+  if (count === 0) {
+    status.innerHTML = `<strong>0</strong> heavy meals scheduled — week will be fully lean.`;
+  } else {
+    status.innerHTML = `<strong>${count}</strong> heavy meal${count > 1 ? "s" : ""} scheduled this week.`;
+  }
+}
+
+function renderWeekHeavySummary() {
+  const summary = document.getElementById("week-heavy-summary");
+  if (!summary) return;
+  const items = Object.keys(scheduledHeavy);
+  if (items.length === 0) {
+    summary.classList.add("empty");
+    summary.textContent = "None selected — week will be fully lean";
+  } else {
+    summary.classList.remove("empty");
+    summary.innerHTML = items.map(name => {
+      const item = heavyPickerItems.find(i => i.name === name);
+      return `<span class="pill">${item ? item.label : name}</span>`;
+    }).join("");
+  }
+}
+
+// Tuna yesterday check
 function tunaYesterday() {
   const data = getWeekData();
   if (data.days.length === 0) return false;
@@ -223,13 +310,12 @@ function tunaYesterday() {
 // ===== MEAL BUILDERS =====
 function buildBreakfast(pattern, forceLight = false) {
   const eggs = "2-3 eggs";
-  
+
   if (forceLight || pattern === "lean" || pattern === "comfort") {
-    // Light breakfasts use bacon/sausage in smaller portions
     const lightOptions = [];
     if (isAvailable("Bacon")) lightOptions.push({ name: "Bacon (light)", weight: "moderate" });
-    if (isAvailable("Wild boar sausage")) lightOptions.push({ name: "Wild boar sausage (small portion)", weight: "moderate" });
-    
+    if (isAvailable("Sausage")) lightOptions.push({ name: "Sausage (small portion)", weight: "moderate" });
+
     if (lightOptions.length === 0) {
       return { slot: "breakfast", items: [eggs], addon: null, weight: "lean" };
     }
@@ -241,12 +327,12 @@ function buildBreakfast(pattern, forceLight = false) {
       weight: protein.weight,
     };
   }
-  
+
   const pool = filterByPantry(foods.breakfastProteins);
   if (pool.length === 0) {
     return { slot: "breakfast", items: [eggs], addon: null, weight: "lean" };
   }
-  
+
   const protein = rand(pool);
   return {
     slot: "breakfast",
@@ -432,9 +518,11 @@ function autoPattern() {
 function generateWeek() {
   const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-  const selectedHeavy = Array.from(document.querySelectorAll(".heavy-pick:checked"))
-    .map(cb => cb.value)
-    .filter(name => isAvailable(name));
+  const selectedHeavy = Object.keys(scheduledHeavy).filter(name => {
+    const isStandalone = foods.standalone.some(f => f.name === name);
+    if (isStandalone) return true;
+    return isAvailable(name);
+  });
 
   if (selectedHeavy.length > 7) {
     alert("⚠️ You picked more than 7 heavy meals. Please reduce to 7 or fewer.");
@@ -679,12 +767,13 @@ document.getElementById("mounjaro").addEventListener("change", renderNotes);
 document.getElementById("selectAll").addEventListener("click", () => selectAllPantry(true));
 document.getElementById("deselectAll").addEventListener("click", () => selectAllPantry(false));
 document.getElementById("resetPantry").addEventListener("click", () => {
-  if (confirm("Reset pantry to all items available?")) {
+  if (confirm("Reset pantry to all items available? (Heavy meal selections will be kept.)")) {
     localStorage.removeItem("mealPantry");
     loadPantry();
     renderPantry();
     renderPantryBanners();
     renderHeavyPicker();
+    renderWeekHeavySummary();
   }
 });
 
@@ -700,8 +789,10 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 
 // ===== INIT =====
 loadPantry();
+loadScheduledHeavy();
 renderPantry();
 renderHeavyPicker();
+renderWeekHeavySummary();
 renderPantryBanners();
 renderTracker();
 renderNotes();

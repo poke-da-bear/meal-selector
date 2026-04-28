@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meal Selector</title>
+<title>Mounjaro Meal Plan Selector</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="app">
   <header>
-    <h1>🍽️ Meal Selector</h1>
+    <h1>🍽️ Mounjaro Meal Plan Selector</h1>
     <p class="tagline">Stay within your guidelines</p>
   </header>
 
@@ -38,13 +38,16 @@
       <h3 class="pantry-heading">🥩 Main Proteins</h3>
       <div class="pantry-grid" id="pantry-mains"></div>
 
-      <h3 class="pantry-heading">🍲 Standalone Meals</h3>
-      <div class="pantry-grid" id="pantry-standalone"></div>
-
       <h3 class="pantry-heading">🥬 Sides & Vegetables</h3>
       <div class="pantry-grid" id="pantry-sides"></div>
 
       <div class="pantry-status" id="pantry-status"></div>
+
+      <!-- Heavy meals section -->
+      <h3 class="pantry-heading" style="margin-top:2rem;">⭐ Heavy Meals to Schedule This Week</h3>
+      <p class="hint" style="margin-bottom:0.8rem;">Pick which heavy meals you want for this week. The Full Week generator will spread them across the week. Leave all unchecked for a fully lean week.</p>
+      <div class="pantry-grid" id="heavy-picker"></div>
+      <div class="pantry-status" id="heavy-status"></div>
     </section>
   </div>
 
@@ -139,13 +142,11 @@
   <div id="week-view" class="view">
     <section class="controls week-controls">
       <div class="control-row">
-        <label class="full-width">
-          <strong>Pick your heavy meals for the week:</strong>
-          <span class="hint">Check the ones you want to have this week. Only items in your Pantry will be available.</span>
-        </label>
-      </div>
-      <div class="heavy-picker" id="heavy-picker">
-        <!-- populated by JS based on pantry -->
+        <div class="full-width">
+          <strong>Heavy meals scheduled this week:</strong>
+          <div id="week-heavy-summary" class="week-heavy-summary">None selected</div>
+          <a class="edit-link" onclick="switchView('pantry')">✏️ Edit selections in Pantry →</a>
+        </div>
       </div>
       <div class="control-row">
         <button id="generateWeek" class="primary">🗓️ Generate Week</button>
@@ -182,7 +183,7 @@
           <h4>Breakfast Proteins</h4>
           <ul>
             <li>Eggs (base)</li>
-            <li>Wild boar sausage (heavy)</li>
+            <li>Sausage (heavy)</li>
             <li>Bacon (heavy)</li>
             <li>Small steak (heavy)</li>
           </ul>
@@ -215,9 +216,7 @@
 
       <details>
         <summary><strong>Rule 1: Breakfast Must Include Protein + Support</strong></summary>
-        <div class="rule-body">
-          Breakfast should not be eggs alone unless necessary.
-        </div>
+        <div class="rule-body">Breakfast should not be eggs alone unless necessary.</div>
       </details>
 
       <details>
@@ -237,65 +236,47 @@
 
       <details>
         <summary><strong>Rule 4: Tuna Frequency</strong></summary>
-        <div class="rule-body">
-          Tuna 2–3x per week max. Don't pair tuna wrap with peas/lima beans.
-        </div>
+        <div class="rule-body">Tuna 2–3x per week max. Don't pair tuna wrap with peas/lima beans.</div>
       </details>
 
       <details>
         <summary><strong>Rule 5: Fish Frequency</strong></summary>
-        <div class="rule-body">
-          No more than one fish-based meal per day (tuna bowl, tuna wrap, mahi).
-        </div>
+        <div class="rule-body">No more than one fish-based meal per day (tuna bowl, tuna wrap, mahi).</div>
       </details>
 
       <details>
         <summary><strong>Rule 6: Comfort Meal Rule</strong></summary>
-        <div class="rule-body">
-          Carnivore chili or cheeseburger soup may replace dinner up to 3x per week. Never both on the same day.
-        </div>
+        <div class="rule-body">Carnivore chili or cheeseburger soup may replace dinner up to 3x per week. Never both on the same day.</div>
       </details>
 
       <details>
         <summary><strong>Rule 7: Carb Control Rule</strong></summary>
-        <div class="rule-body">
-          Only one controlled-carb item per meal (peas, lima beans, carrots, coleslaw, wheat wrap/bread).
-        </div>
+        <div class="rule-body">Only one controlled-carb item per meal (peas, lima beans, carrots, coleslaw, wheat wrap/bread).</div>
       </details>
 
       <details>
         <summary><strong>Rule 8: Carrots Are Optional, Not Planned</strong></summary>
-        <div class="rule-body">
-          Carrots are a grill add-on. Keep portion small/moderate.
-        </div>
+        <div class="rule-body">Carrots are a grill add-on. Keep portion small/moderate.</div>
       </details>
 
       <details>
         <summary><strong>Rule 9: Lean Correction Rule</strong></summary>
-        <div class="rule-body">
-          If the previous meal was heavy, the next meal should be lean.
-        </div>
+        <div class="rule-body">If the previous meal was heavy, the next meal should be lean.</div>
       </details>
 
       <details>
         <summary><strong>Rule 10: Mounjaro Rule</strong></summary>
-        <div class="rule-body">
-          If appetite is low: protein first → side → optional carb.
-        </div>
+        <div class="rule-body">If appetite is low: protein first → side → optional carb.</div>
       </details>
 
       <details>
         <summary><strong>Rule 11: No Tuna Two Days in a Row</strong></summary>
-        <div class="rule-body">
-          Tuna (bowl or wrap) should not appear on consecutive days. Works alongside Rule 4.
-        </div>
+        <div class="rule-body">Tuna (bowl or wrap) should not appear on consecutive days.</div>
       </details>
 
       <details>
         <summary><strong>Rule 12: Pantry Awareness</strong></summary>
-        <div class="rule-body">
-          The generator only uses ingredients you've checked off in the 🛒 Pantry tab. Update your pantry whenever you shop or run out of something.
-        </div>
+        <div class="rule-body">The generator only uses ingredients you've checked off in the 🛒 Pantry tab. Heavy meals to schedule are also picked there.</div>
       </details>
     </section>
   </div>
